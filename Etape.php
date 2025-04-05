@@ -230,6 +230,66 @@ $deleted = isset($_GET['deleted']) && $_GET['deleted'] == 1;
             </div>
         </div>
     </div>
+
+    <!-- Villes ayant accueilli des étapes -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h2 class="h5 mb-0">Villes ayant accueilli des étapes</h2>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Ville</th>
+                            <th>Pays</th>
+                            <th class="text-center">Nombre de départs</th>
+                            <th class="text-center">Nombre d'arrivées</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        $sql_villes = "SELECT v.nomVille, p.nomPays,
+                                     COUNT(DISTINCT CASE WHEN v.numVille = e.numVille THEN e.numEtape END) as nb_departs,
+                                     COUNT(DISTINCT CASE WHEN v.numVille = e.numVille_1 THEN e.numEtape END) as nb_arrivees
+                                     FROM Ville v
+                                     JOIN Pays p ON v.codePays = p.codePays
+                                     LEFT JOIN Etape e ON v.numVille = e.numVille OR v.numVille = e.numVille_1
+                                     GROUP BY v.numVille, v.nomVille, p.nomPays
+                                     HAVING nb_departs > 0 OR nb_arrivees > 0
+                                     ORDER BY v.nomVille";
+                        
+                        $result_villes = $conn->query($sql_villes);
+                        if ($result_villes->num_rows > 0) {
+                            while($ville = $result_villes->fetch_assoc()) {
+                                echo '<tr>';
+                                echo '<td>' . $ville['nomVille'] . '</td>';
+                                echo '<td>' . $ville['nomPays'] . '</td>';
+                                echo '<td class="text-center">';
+                                if ($ville['nb_departs'] > 0) {
+                                    echo '<span class="badge bg-primary">' . $ville['nb_departs'] . '</span>';
+                                } else {
+                                    echo '<i class="bi bi-x-circle-fill text-muted"></i>';
+                                }
+                                echo '</td>';
+                                echo '<td class="text-center">';
+                                if ($ville['nb_arrivees'] > 0) {
+                                    echo '<span class="badge bg-success">' . $ville['nb_arrivees'] . '</span>';
+                                } else {
+                                    echo '<i class="bi bi-x-circle-fill text-muted"></i>';
+                                }
+                                echo '</td>';
+                                echo '</tr>';
+                            }
+                        } else {
+                            echo "<tr><td colspan='4' class='text-center'>Aucune ville trouvée.</td></tr>";
+                        }
+                        ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
 
 <?php
