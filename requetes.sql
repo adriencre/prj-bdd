@@ -90,4 +90,20 @@ WHERE NOT EXISTS (
     FROM Ville v 
     WHERE v.nomVille = nouvelles_villes.ville 
     AND v.codePays = 'FRA'
-); 
+);
+
+-- 8) Liste des équipes et coureurs par pays
+SELECT 
+    p.nomPays,
+    e.nomEquipe,
+    c.nom,
+    c.prenom
+FROM Pays p
+LEFT JOIN Equipe e ON p.codePays = e.codePays
+LEFT JOIN Coureur c ON e.numEquipe = c.numEquipe
+WHERE e.nomEquipe IS NOT NULL
+ORDER BY 
+    p.nomPays ASC,
+    e.nomEquipe ASC,
+    c.nom ASC,
+    c.prenom ASC; 
