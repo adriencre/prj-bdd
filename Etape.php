@@ -290,6 +290,48 @@ $deleted = isset($_GET['deleted']) && $_GET['deleted'] == 1;
             </div>
         </div>
     </div>
+
+    <!-- Villes de France n'ayant pas accueilli d'étape -->
+    <div class="card mt-4">
+        <div class="card-header bg-warning text-dark">
+            <h2 class="h5 mb-0">Villes de France n'ayant pas accueilli d'étape</h2>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Ville</th>
+                            <th>Pays</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        $sql_villes_france = "SELECT v.nomVille, p.nomPays
+                                            FROM Ville v
+                                            JOIN Pays p ON v.codePays = p.codePays
+                                            LEFT JOIN Etape e ON v.numVille = e.numVille OR v.numVille = e.numVille_1
+                                            WHERE p.codePays = 'FRA'
+                                            AND e.numEtape IS NULL
+                                            ORDER BY v.nomVille";
+                        
+                        $result_villes_france = $conn->query($sql_villes_france);
+                        if ($result_villes_france->num_rows > 0) {
+                            while($ville = $result_villes_france->fetch_assoc()) {
+                                echo '<tr>';
+                                echo '<td>' . $ville['nomVille'] . '</td>';
+                                echo '<td>' . $ville['nomPays'] . '</td>';
+                                echo '</tr>';
+                            }
+                        } else {
+                            echo "<tr><td colspan='2' class='text-center'>Toutes les villes de France ont accueilli au moins une étape.</td></tr>";
+                        }
+                        ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
 
 <?php
