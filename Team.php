@@ -5,8 +5,18 @@ include 'config.php';
 
 <div class="container my-5">
     <h1 class="mb-4">Équipes du Tour de France 2022</h1>
-    
+
+    <form method="POST" class="mb-4">
+        <div class="input-group">
+            <input type="number" name="min_joueurs" class="form-control" placeholder="Nombre minimum de joueurs" required>
+            <button type="submit" class="btn btn-primary">Filtrer</button>
+        </div>
+    </form>
+
     <?php
+    // Vérifier si le formulaire a été soumis
+    $X = isset($_POST['min_joueurs']) ? intval($_POST['min_joueurs']) : 0;
+
     // Récupération des pays avec leurs équipes
     $sql_pays = "SELECT DISTINCT p.nomPays, p.codePays 
                  FROM Pays p 
@@ -25,13 +35,14 @@ include 'config.php';
 
             // Récupération des équipes pour ce pays
             $sql_equipes = "SELECT e.numEquipe, e.nomEquipe, COUNT(c.numDossard) AS nb_coureurs 
-                           FROM Equipe e 
-                           LEFT JOIN Coureur c ON e.numEquipe = c.numEquipe 
-                           WHERE e.codePays = ? 
-                           GROUP BY e.numEquipe 
-                           ORDER BY e.nomEquipe";
+                            FROM Equipe e 
+                            LEFT JOIN Coureur c ON e.numEquipe = c.numEquipe 
+                            WHERE e.codePays = ? 
+                            GROUP BY e.numEquipe 
+                            HAVING COUNT(c.numDossard) >= ? 
+                            ORDER BY e.nomEquipe";
             $stmt = $conn->prepare($sql_equipes);
-            $stmt->bind_param("s", $pays['codePays']);
+            $stmt->bind_param("si", $pays['codePays'], $X);
             $stmt->execute();
             $result_equipes = $stmt->get_result();
 
@@ -86,4 +97,4 @@ include 'config.php';
 <?php
 include 'footer.php';
 $conn->close();
-?>
+?> 
