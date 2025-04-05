@@ -90,32 +90,4 @@ WHERE NOT EXISTS (
     FROM Ville v 
     WHERE v.nomVille = nouvelles_villes.ville 
     AND v.codePays = 'FRA'
-);
-
--- 8) Liste des équipes et coureurs par pays
-SELECT 
-    p.nomPays,
-    e.nomEquipe,
-    c.nom,
-    c.prenom
-FROM Pays p
-LEFT JOIN Equipe e ON p.codePays = e.codePays
-LEFT JOIN Coureur c ON e.numEquipe = c.numEquipe
-WHERE e.nomEquipe IS NOT NULL
-ORDER BY 
-    p.nomPays ASC,
-    e.nomEquipe ASC,
-    c.nom ASC,
-    c.prenom ASC;
-
--- 12) Équipes ayant au moins X joueurs (solution avec tables de la base)
-SELECT 
-    e.nomEquipe,
-    p.nomPays,
-    COUNT(c.numDossard) as nombre_coureurs
-FROM Equipe e
-JOIN Pays p ON e.codePays = p.codePays
-LEFT JOIN Coureur c ON e.numEquipe = c.numEquipe
-GROUP BY e.numEquipe, e.nomEquipe, p.nomPays
-HAVING COUNT(c.numDossard) >= 8  -- Remplacez 8 par le nombre X souhaité
-ORDER BY nombre_coureurs DESC, e.nomEquipe ASC; 
+); 

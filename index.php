@@ -56,7 +56,7 @@ $result_classement = $conn->query($sql_classement);
         <div class="col-md-3">
             <div class="card stats-card">
                 <div class="d-flex justify-content-center">
-                    <i class="fas fa-route fa-3x text-primary my-3"></i>
+                    <i class="fas fa-road fa-3x text-primary my-3"></i>
                 </div>
                 <h3><?php echo number_format($total_distance, 0, ',', ' '); ?> km</h3>
                 <p>Distance Totale</p>
@@ -89,6 +89,55 @@ $result_classement = $conn->query($sql_classement);
                 <p>Étapes</p>
             </div>
         </div>
+        
+    </div>
+
+    <!-- Kilomètres par Type d'Étape -->
+    <div class="row mb-4">
+        <?php
+        // Récupération des kilomètres par type d'étape
+        $sql_kilometres_type = "
+            SELECT 
+                te.nomTypeEtape,
+                COUNT(e.numEtape) AS nombre_etapes,
+                SUM(e.distance) AS total_kilometres
+            FROM 
+                TypeEtape te
+            LEFT JOIN 
+                Etape e ON te.idTypeEtape = e.idTypeEtape
+            GROUP BY 
+                te.nomTypeEtape
+            ORDER BY 
+                total_kilometres DESC";
+
+        $result_kilometres_type = $conn->query($sql_kilometres_type);
+
+        if ($result_kilometres_type->num_rows > 0) {
+            $colors = ['primary', 'success', 'danger', 'warning', 'info', 'secondary'];
+            $color_index = 0;
+            
+            while ($row = $result_kilometres_type->fetch_assoc()) {
+                $distance_moyenne = $row['nombre_etapes'] > 0 ? round($row['total_kilometres'] / $row['nombre_etapes'], 1) : 0;
+                $color = $colors[$color_index % count($colors)];
+                $color_index++;
+                
+                // Déterminer l'icône en fonction du type d'étape
+                $icon = 'fa-route'; // Icône par défaut
+                
+                echo '<div class="col-md-3 mb-3">';
+                echo '<div class="card stats-card">';
+                echo '<div class="d-flex justify-content-center">';
+                echo '<i class="fas ' . $icon . ' fa-3x text-' . $color . ' my-3"></i>';
+                echo '</div>';
+                echo '<h3>' . number_format($row['total_kilometres'], 0, ',', ' ') . ' km</h3>';
+                echo '<p>' . $row['nomTypeEtape'] . ' (' . $row['nombre_etapes'] . ' étapes)</p>';
+                echo '</div>';
+                echo '</div>';
+            }
+        } else {
+            echo "<div class='col-12'><p class='alert alert-info'>Aucune donnée trouvée.</p></div>";
+        }
+        ?>
     </div>
 
     <!-- Parcours et Profil des étapes -->
