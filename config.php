@@ -1,8 +1,8 @@
 <?php
 // Configuration de la base de données
 $servername = "localhost";
-$username = "root"; // à modifier selon votre configuration
-$password = "root"; // à modifier selon votre configuration
+$username = "login8082";
+$password = "quGvDsmvUTeaEOP";
 $dbname = "bdd_tdf";
 
 // Création de la connexion

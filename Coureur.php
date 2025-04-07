@@ -54,16 +54,18 @@ $total_coureurs = $row_count['total'];
 $total_pages = ceil($total_coureurs / $coureurs_par_page);
 
 // Requête pour récupérer les coureurs avec pagination
-$sql_coureurs = "SELECT c.numDossard, c.nom, c.prenom, c.DN, e.nomEquipe, p.nomPays 
+$sql_coureurs = "SELECT c.numDossard, c.nom, c.prenom, c.DN, e.nomEquipe, p.nomPays,
+                COUNT(DISTINCT b.idBonification) as nb_bonifications
                 FROM Coureur c 
                 LEFT JOIN Equipe e ON c.numEquipe = e.numEquipe 
-                LEFT JOIN Pays p ON c.codePays = p.codePays";
+                LEFT JOIN Pays p ON c.codePays = p.codePays
+                LEFT JOIN Bonification b ON c.numDossard = b.numDossard";
 
 if (!empty($sql_conditions)) {
     $sql_coureurs .= " WHERE " . implode(" AND ", $sql_conditions);
 }
 
-$sql_coureurs .= " ORDER BY c.nom, c.prenom LIMIT ?, ?";
+$sql_coureurs .= " GROUP BY c.numDossard, c.nom, c.prenom, c.DN, e.nomEquipe, p.nomPays ORDER BY c.nom, c.prenom LIMIT ?, ?";
 
 // Ajouter les paramètres de pagination
 $sql_params[] = $offset;
@@ -140,6 +142,7 @@ $result_equipes = $conn->query($sql_equipes);
                     <th>Âge</th>
                     <th>Équipe</th>
                     <th>Pays</th>
+                    <th>Bonifications</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -160,6 +163,13 @@ $result_equipes = $conn->query($sql_equipes);
                     <td><?php echo $age; ?> ans</td>
                     <td><?php echo $coureur['nomEquipe']; ?></td>
                     <td><?php echo $coureur['nomPays']; ?></td>
+                    <td class="text-center">
+                        <?php if ($coureur['nb_bonifications'] == 0): ?>
+                            <i class="bi bi-x-circle-fill text-danger" style="font-size: 1.2em;"></i>
+                        <?php else: ?>
+                            <span class="badge bg-success"><?php echo $coureur['nb_bonifications']; ?></span>
+                        <?php endif; ?>
+                    </td>
                     <td>
                         <a href="Coureur_detail.php?id=<?php echo $coureur['numDossard']; ?>" class="btn btn-sm btn-info">Détails</a>
                     </td>
@@ -213,6 +223,44 @@ $result_equipes = $conn->query($sql_equipes);
     
     <div class="mt-3 text-center">
         <p>Affichage de <?php echo min(($offset + 1), $total_coureurs); ?> à <?php echo min(($offset + $coureurs_par_page), $total_coureurs); ?> sur <?php echo $total_coureurs; ?> coureurs</p>
+    </div>
+
+    <!-- Section des coureurs non participants -->
+    <div class="card mt-5">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0">Coureurs enregistrés mais n'ayant pas participé au Tour</h5>
+        </div>
+        <div class="card-body">
+            <?php
+            $sql_non_participants = "SELECT c.numDossard, c.nom, c.prenom, e.nomEquipe, p.nomPays
+            FROM Coureur c
+            LEFT JOIN Equipe e ON c.numEquipe = e.numEquipe
+            LEFT JOIN Pays p ON c.codePays = p.codePays
+            LEFT JOIN Performance perf ON c.numDossard = perf.numDossard
+            WHERE perf.numEtape IS NULL
+            ORDER BY c.nom, c.prenom";
+            
+            $result_non_participants = $conn->query($sql_non_participants);
+            if ($result_non_participants->num_rows > 0) {
+                echo '<div class="table-responsive">';
+                echo '<table class="table table-hover">';
+                echo '<thead><tr><th>Dossard</th><th>Nom</th><th>Prénom</th><th>Équipe</th><th>Pays</th></tr></thead>';
+                echo '<tbody>';
+                while($coureur = $result_non_participants->fetch_assoc()) {
+                    echo '<tr>';
+                    echo '<td>' . $coureur['numDossard'] . '</td>';
+                    echo '<td>' . $coureur['nom'] . '</td>';
+                    echo '<td>' . $coureur['prenom'] . '</td>';
+                    echo '<td>' . $coureur['nomEquipe'] . '</td>';
+                    echo '<td>' . $coureur['nomPays'] . '</td>';
+                    echo '</tr>';
+                }
+                echo '</tbody></table></div>';
+            } else {
+                echo '<p class="text-muted">Tous les coureurs enregistrés ont participé au Tour.</p>';
+            }
+            ?>
+        </div>
     </div>
 </div>
 
