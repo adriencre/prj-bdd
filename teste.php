@@ -1,14 +1,24 @@
 <?php
-$host = "localhost"; 
-$username = "root";
-$password = "root"; 
-$dbname = "bdd_tdf"; 
+
+require_once 'config.php';
+include 'header.php';
+
+
+//$host = "localhost"; 
+//$username = "root";
+//$password = "root"; 
+//$dbname = "bdd_tdf"; 
+
+//$servername = "localhost";
+//$username = "login8082";
+//$password = "quGvDsmvUTeaEOP";
+//$dbname = "bdd_tdf";
 
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-$conn = new mysqli($host, $username, $password, $dbname);
+$conn = new mysqli($servername, $username, $password, $dbname);
 
 if ($conn->connect_error) {
     die("Erreur de connexion : " . $conn->connect_error);

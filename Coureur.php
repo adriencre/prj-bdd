@@ -225,6 +225,79 @@ $result_equipes = $conn->query($sql_equipes);
         <p>Affichage de <?php echo min(($offset + 1), $total_coureurs); ?> à <?php echo min(($offset + $coureurs_par_page), $total_coureurs); ?> sur <?php echo $total_coureurs; ?> coureurs</p>
     </div>
 
+    <!-- Section des coureurs ayant participé à au moins X étapes -->
+    <div class="card mt-5">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">Coureurs ayant participé à au moins X étapes</h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" class="mb-4">
+                <div class="row g-3 align-items-center">
+                    <div class="col-auto">
+                        <label for="min_etapes" class="form-label">Nombre minimum d'étapes :</label>
+                    </div>
+                    <div class="col-auto">
+                        <input type="number" name="min_etapes" id="min_etapes" class="form-control" value="<?php echo isset($_GET['min_etapes']) ? intval($_GET['min_etapes']) : 10; ?>" min="1" max="21">
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-primary">Filtrer</button>
+                    </div>
+                </div>
+            </form>
+
+            <?php
+            $min_etapes = isset($_GET['min_etapes']) ? intval($_GET['min_etapes']) : 10;
+            
+            $sql_coureurs_etapes = "
+                SELECT 
+                    c.numDossard,
+                    c.nom,
+                    c.prenom,
+                    e.nomEquipe,
+                    p.nomPays,
+                    COUNT(DISTINCT perf.numEtape) as nombre_etapes
+                FROM 
+                    Coureur c
+                    LEFT JOIN Equipe e ON c.numEquipe = e.numEquipe
+                    LEFT JOIN Pays p ON c.codePays = p.codePays
+                    LEFT JOIN Performance perf ON c.numDossard = perf.numDossard
+                GROUP BY 
+                    c.numDossard, c.nom, c.prenom, e.nomEquipe, p.nomPays
+                HAVING 
+                    COUNT(DISTINCT perf.numEtape) >= ?
+                ORDER BY 
+                    nombre_etapes DESC, c.nom ASC, c.prenom ASC";
+            
+            $stmt = $conn->prepare($sql_coureurs_etapes);
+            $stmt->bind_param("i", $min_etapes);
+            $stmt->execute();
+            $result_coureurs_etapes = $stmt->get_result();
+            
+            if ($result_coureurs_etapes->num_rows > 0) {
+                echo '<div class="table-responsive">';
+                echo '<table class="table table-hover">';
+                echo '<thead><tr><th>Dossard</th><th>Nom</th><th>Prénom</th><th>Équipe</th><th>Pays</th><th class="text-center">Nombre d\'étapes</th></tr></thead>';
+                echo '<tbody>';
+                
+                while($coureur = $result_coureurs_etapes->fetch_assoc()) {
+                    echo '<tr>';
+                    echo '<td>' . $coureur['numDossard'] . '</td>';
+                    echo '<td>' . $coureur['nom'] . '</td>';
+                    echo '<td>' . $coureur['prenom'] . '</td>';
+                    echo '<td>' . $coureur['nomEquipe'] . '</td>';
+                    echo '<td>' . $coureur['nomPays'] . '</td>';
+                    echo '<td class="text-center"><span class="badge bg-primary">' . $coureur['nombre_etapes'] . '</span></td>';
+                    echo '</tr>';
+                }
+                
+                echo '</tbody></table></div>';
+            } else {
+                echo '<p class="text-muted">Aucun coureur n\'a participé à ' . $min_etapes . ' étapes ou plus.</p>';
+            }
+            ?>
+        </div>
+    </div>
+
     <!-- Section des coureurs non participants -->
     <div class="card mt-5">
         <div class="card-header bg-warning text-dark">
