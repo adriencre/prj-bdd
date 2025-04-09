@@ -200,6 +200,9 @@ session_start();
                     <li class="nav-item">
                         <a class="nav-link" href="Etape.php">Étapes</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="classement.php">Classement</a>
+                    </li>
                 </ul>
 
             </div>

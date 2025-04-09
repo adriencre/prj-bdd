@@ -3,7 +3,7 @@
 $servername = "localhost";
 $username = "login8082";
 $password = "quGvDsmvUTeaEOP";
-$dbname = "bdd_tdf";
+$dbname = "bdd_tdf2";
 
 // Création de la connexion
 $conn = new mysqli($servername, $username, $password, $dbname);
