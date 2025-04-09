@@ -90,6 +90,13 @@ $sql_equipes = "SELECT DISTINCT e.numEquipe, e.nomEquipe FROM Equipe e
 $result_equipes = $conn->query($sql_equipes);
 ?>
 
+<style>
+    .coureur-complet {
+        font-weight: bold;
+        
+    }
+</style>
+
 <div class="container my-5">
     <h1 class="mb-4">Coureurs du Tour de France 2022</h1>
     
@@ -154,11 +161,21 @@ $result_equipes = $conn->query($sql_equipes);
                         $dob = new DateTime($coureur['DN']);
                         $now = new DateTime();
                         $age = $now->diff($dob)->y;
+                        
+                        // Vérifier si le coureur a participé à toutes les étapes
+                        $sql_etapes = "SELECT COUNT(DISTINCT numEtape) as nb_etapes FROM Performance WHERE numDossard = ?";
+                        $stmt_etapes = $conn->prepare($sql_etapes);
+                        $stmt_etapes->bind_param("i", $coureur['numDossard']);
+                        $stmt_etapes->execute();
+                        $result_etapes = $stmt_etapes->get_result();
+                        $row_etapes = $result_etapes->fetch_assoc();
+                        $is_complet = $row_etapes['nb_etapes'] == 21;
+                        $style = $is_complet ? 'coureur-complet' : '';
                 ?>
                 <tr>
                     <td><?php echo $coureur['numDossard']; ?></td>
-                    <td><?php echo $coureur['nom']; ?></td>
-                    <td><?php echo $coureur['prenom']; ?></td>
+                    <td class="<?php echo $style; ?>"><?php echo $coureur['nom']; ?></td>
+                    <td class="<?php echo $style; ?>"><?php echo $coureur['prenom']; ?></td>
                     <td><?php echo date('d/m/Y', strtotime($coureur['DN'])); ?></td>
                     <td><?php echo $age; ?> ans</td>
                     <td><?php echo $coureur['nomEquipe']; ?></td>
@@ -182,6 +199,11 @@ $result_equipes = $conn->query($sql_equipes);
                 ?>
             </tbody>
         </table>
+        
+        <!-- Légende -->
+        <div class="mt-3">
+            <p class="text-muted"><strong>Légende :</strong> Les coureurs en gras ont participé à toutes les étapes du Tour de France.</p>
+        </div>
     </div>
     
     <!-- Pagination -->
@@ -223,6 +245,140 @@ $result_equipes = $conn->query($sql_equipes);
     
     <div class="mt-3 text-center">
         <p>Affichage de <?php echo min(($offset + 1), $total_coureurs); ?> à <?php echo min(($offset + $coureurs_par_page), $total_coureurs); ?> sur <?php echo $total_coureurs; ?> coureurs</p>
+    </div>
+
+    <!-- Section des coureurs ayant participé à au moins X étapes -->
+    <div class="card mt-5" id="section-etapes">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">Coureurs ayant participé à tel nombre d'étapes</h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" class="mb-4">
+                <div class="row g-3 align-items-center">
+                    <div class="col-auto">
+                        <label for="min_etapes" class="form-label">Nombre minimum d'étapes :</label>
+                    </div>
+                    <div class="col-auto">
+                        <input type="number" name="min_etapes" id="min_etapes" class="form-control" value="<?php echo isset($_GET['min_etapes']) ? intval($_GET['min_etapes']) : 10; ?>" min="1" max="21">
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-primary">Filtrer</button>
+                    </div>
+                </div>
+            </form>
+
+            <?php
+            $min_etapes = isset($_GET['min_etapes']) ? intval($_GET['min_etapes']) : 10;
+            
+            // Pagination pour les coureurs par étapes
+            $coureurs_par_page_etapes = 10;
+            $page_etapes = isset($_GET['page_etapes']) ? intval($_GET['page_etapes']) : 1;
+            $offset_etapes = ($page_etapes - 1) * $coureurs_par_page_etapes;
+            
+            // Requête pour compter le nombre total de coureurs
+            $sql_count_etapes = "
+                SELECT COUNT(*) as total
+                FROM (
+                    SELECT c.numDossard
+                    FROM Coureur c
+                    LEFT JOIN Performance perf ON c.numDossard = perf.numDossard
+                    GROUP BY c.numDossard
+                    HAVING COUNT(DISTINCT perf.numEtape) >= ?
+                ) as subquery";
+            
+            $stmt_count = $conn->prepare($sql_count_etapes);
+            $stmt_count->bind_param("i", $min_etapes);
+            $stmt_count->execute();
+            $result_count = $stmt_count->get_result();
+            $row_count = $result_count->fetch_assoc();
+            $total_coureurs_etapes = $row_count['total'];
+            $total_pages_etapes = ceil($total_coureurs_etapes / $coureurs_par_page_etapes);
+            
+            // Requête principale avec pagination
+            $sql_coureurs_etapes = "
+                SELECT 
+                    c.numDossard,
+                    c.nom,
+                    c.prenom,
+                    e.nomEquipe,
+                    p.nomPays,
+                    COUNT(DISTINCT perf.numEtape) as nombre_etapes
+                FROM 
+                    Coureur c
+                    LEFT JOIN Equipe e ON c.numEquipe = e.numEquipe
+                    LEFT JOIN Pays p ON c.codePays = p.codePays
+                    LEFT JOIN Performance perf ON c.numDossard = perf.numDossard
+                GROUP BY 
+                    c.numDossard, c.nom, c.prenom, e.nomEquipe, p.nomPays
+                HAVING 
+                    COUNT(DISTINCT perf.numEtape) >= ?
+                ORDER BY 
+                    nombre_etapes DESC, c.nom ASC, c.prenom ASC
+                LIMIT ?, ?";
+            
+            $stmt = $conn->prepare($sql_coureurs_etapes);
+            $stmt->bind_param("iii", $min_etapes, $offset_etapes, $coureurs_par_page_etapes);
+            $stmt->execute();
+            $result_coureurs_etapes = $stmt->get_result();
+            
+            if ($result_coureurs_etapes->num_rows > 0) {
+                echo '<div class="table-responsive">';
+                echo '<table class="table table-hover">';
+                echo '<thead><tr><th>Dossard</th><th>Nom</th><th>Prénom</th><th>Équipe</th><th>Pays</th><th class="text-center">Nombre d\'étapes</th></tr></thead>';
+                echo '<tbody>';
+                
+                while($coureur = $result_coureurs_etapes->fetch_assoc()) {
+                    echo '<tr>';
+                    echo '<td>' . $coureur['numDossard'] . '</td>';
+                    echo '<td>' . $coureur['nom'] . '</td>';
+                    echo '<td>' . $coureur['prenom'] . '</td>';
+                    echo '<td>' . $coureur['nomEquipe'] . '</td>';
+                    echo '<td>' . $coureur['nomPays'] . '</td>';
+                    echo '<td class="text-center"><span class="badge bg-primary">' . $coureur['nombre_etapes'] . '</span></td>';
+                    echo '</tr>';
+                }
+                
+                echo '</tbody></table>';
+                
+                // Pagination
+                if ($total_pages_etapes > 1) {
+                    echo '<nav aria-label="Page navigation" class="mt-4">';
+                    echo '<ul class="pagination justify-content-center">';
+                    
+                    // Bouton précédent
+                    if ($page_etapes > 1) {
+                        echo '<li class="page-item">';
+                        echo '<a class="page-link" href="?min_etapes=' . $min_etapes . '&page_etapes=' . ($page_etapes - 1) . '#section-etapes">Précédent</a>';
+                        echo '</li>';
+                    }
+                    
+                    // Numéros de page
+                    for ($i = max(1, $page_etapes - 2); $i <= min($total_pages_etapes, $page_etapes + 2); $i++) {
+                        echo '<li class="page-item ' . ($i == $page_etapes ? 'active' : '') . '">';
+                        echo '<a class="page-link" href="?min_etapes=' . $min_etapes . '&page_etapes=' . $i . '#section-etapes">' . $i . '</a>';
+                        echo '</li>';
+                    }
+                    
+                    // Bouton suivant
+                    if ($page_etapes < $total_pages_etapes) {
+                        echo '<li class="page-item">';
+                        echo '<a class="page-link" href="?min_etapes=' . $min_etapes . '&page_etapes=' . ($page_etapes + 1) . '#section-etapes">Suivant</a>';
+                        echo '</li>';
+                    }
+                    
+                    echo '</ul>';
+                    echo '</nav>';
+                    
+                    // Affichage du nombre de résultats
+                    echo '<p class="text-center mt-2">';
+                    echo 'Affichage de ' . ($offset_etapes + 1) . ' à ' . min($offset_etapes + $coureurs_par_page_etapes, $total_coureurs_etapes) . ' sur ' . $total_coureurs_etapes . ' coureurs';
+                    echo '</p>';
+                }
+            } else {
+                echo '<p class="text-muted">Aucun coureur n\'a participé à ' . $min_etapes . ' étapes ou plus.</p>';
+            }
+            ?>
+        </div>
     </div>
 
     <!-- Section des coureurs non participants -->

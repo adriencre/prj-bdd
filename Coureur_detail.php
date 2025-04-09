@@ -141,6 +141,22 @@ $stmt = $conn->prepare($sql_bonifications);
 $stmt->bind_param("i", $coureur_id);
 $stmt->execute();
 $result_bonifications = $stmt->get_result();
+
+// Fonction pour convertir le format de temps en secondes
+function TIME_TO_SEC($time) {
+    $parts = explode(':', $time);
+    if (count($parts) === 3) {
+        return $parts[0] * 3600 + $parts[1] * 60 + $parts[2];
+    }
+    return 0;
+}
+
+// Fonction pour convertir les secondes en format de temps
+function SEC_TO_TIME($seconds) {
+    // Arrondir les secondes à l'entier le plus proche pour éviter les avertissements de conversion
+    $seconds = round($seconds);
+    return sprintf('%02d:%02d:%02d', floor($seconds / 3600), floor(($seconds % 3600) / 60), $seconds % 60);
+}
 ?>
 
 <div class="container my-5">
@@ -219,6 +235,43 @@ $result_bonifications = $stmt->get_result();
                             <th>Bonifications</th>
                             <td><?php echo $result_bonifications->num_rows > 0 ? $result_bonifications->num_rows : 'Aucune'; ?></td>
                         </tr>
+                        <?php
+                        // Calcul des temps minimum, maximum et moyen
+                        if ($result_performances->num_rows > 0) {
+                            // Réinitialiser le pointeur du résultat
+                            $result_performances->data_seek(0);
+                            
+                            $temps_array = [];
+                            $total_seconds = 0;
+                            
+                            while ($perf = $result_performances->fetch_assoc()) {
+                                // Convertir le temps en secondes
+                                $temps_sec = TIME_TO_SEC($perf['temps']);
+                                $temps_array[] = $temps_sec;
+                                $total_seconds += $temps_sec;
+                            }
+                            
+                            // Calculer les statistiques
+                            $temps_min = min($temps_array);
+                            $temps_max = max($temps_array);
+                            $temps_moyen = $total_seconds / count($temps_array);
+                            
+                            // Réinitialiser le pointeur pour les autres utilisations
+                            $result_performances->data_seek(0);
+                        ?>
+                        <tr>
+                            <th>Temps minimum</th>
+                            <td><?php echo SEC_TO_TIME($temps_min); ?></td>
+                        </tr>
+                        <tr>
+                            <th>Temps maximum</th>
+                            <td><?php echo SEC_TO_TIME($temps_max); ?></td>
+                        </tr>
+                        <tr>
+                            <th>Temps moyen</th>
+                            <td><?php echo SEC_TO_TIME($temps_moyen); ?></td>
+                        </tr>
+                        <?php } ?>
                     </table>
                 </div>
             </div>
