@@ -153,6 +153,8 @@ function TIME_TO_SEC($time) {
 
 // Fonction pour convertir les secondes en format de temps
 function SEC_TO_TIME($seconds) {
+    // Arrondir les secondes à l'entier le plus proche pour éviter les avertissements de conversion
+    $seconds = round($seconds);
     return sprintf('%02d:%02d:%02d', floor($seconds / 3600), floor(($seconds % 3600) / 60), $seconds % 60);
 }
 ?>
